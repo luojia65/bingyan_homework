@@ -153,11 +153,10 @@ pub struct LinkedList<T> {
 }
 
 macro_rules! push_pop_impl {
-    ($push_fn: ident, $pop_fn: ident, 
-    $new_node_from: ident, $old_node_from: ident,
-    $new_node_dir: ident, $old_node_dir: ident) => {
+    ($inner_type: ty, $push_fn: ident, $pop_fn: ident, 
+    $new_node_from: ident, $old_node_from: ident, $new_node_dir: ident, $old_node_dir: ident) => {
         
-    pub fn $push_fn(&mut self, data: T) {
+    pub fn $push_fn(&mut self, data: $inner_type) {
         let mut new_node = Box::new(LinkedListNode {
             prev: None,
             next: None,
@@ -172,7 +171,7 @@ macro_rules! push_pop_impl {
         self.$old_node_from = new_node;
     }
 
-    pub fn $pop_fn(&mut self) -> Option<T> {
+    pub fn $pop_fn(&mut self) -> Option<$inner_type> {
         if let Some(old_node) = self.$old_node_from {
             let old_node = unsafe { Box::from_raw(old_node.as_ptr()) };
             self.$old_node_from = old_node.$old_node_dir;
@@ -195,8 +194,9 @@ impl<T> LinkedList<T> {
             tail: None
         }
     }
-    push_pop_impl!(push_back, pop_back, head, tail, next, prev);
-    push_pop_impl!(push_front, pop_front, tail, head, prev, next);
+    //rust为什么厉害，就厉害在这
+    push_pop_impl!(T, push_back,  pop_back,  head, tail, next, prev);
+    push_pop_impl!(T, push_front, pop_front, tail, head, prev, next);
 }
 
 impl<T> Drop for LinkedList<T> {
