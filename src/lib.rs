@@ -34,7 +34,8 @@
 //
 //}
 
-//未考虑析构函数泄漏，未考虑生命周期
+//未考虑析构函数泄漏，未考虑生命周期，未考虑PhantomData
+//这是一段不合格的rust代码！
 
 struct BPlusTree<K: Ord, V> {
     // I tried &Node, Box, Rc, Arc, Cell, RefCell and Mutex here, none of them succeeded
@@ -136,8 +137,6 @@ impl<K: Ord, V> BPlusNode<K, V> {
     }
 }
 
-// 据群友经验，这里需要对裸指针封装，可惜这是我第一次写树...
-// 绝望
 type NodePtr<K, V> = *mut BPlusNode<K, V>;
 
 
