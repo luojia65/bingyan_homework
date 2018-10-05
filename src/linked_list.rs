@@ -1,12 +1,18 @@
 use std::ptr::NonNull;
 use std::marker::PhantomData;
 
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct LinkedList<T> {
     head: Option<NonNull<LinkedListNode<T>>>,
     tail: Option<NonNull<LinkedListNode<T>>>,
-    // rust为什么这么难写，就难写在这
-    // 告诉编译器我用于这个Box，方便借用检查
     _marker: PhantomData<Box<LinkedListNode<T>>>  
+}
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+struct LinkedListNode<T> {
+    prev: Option<NonNull<LinkedListNode<T>>>,
+    next: Option<NonNull<LinkedListNode<T>>>,
+    data: T
 }
 
 macro_rules! push_pop_impl {
@@ -52,7 +58,6 @@ impl<T> LinkedList<T> {
             _marker: PhantomData
         }
     }
-    //rust为什么厉害，就厉害在这
     push_pop_impl!(T, push_back,  pop_back,  head, tail, next, prev);
     push_pop_impl!(T, push_front, pop_front, tail, head, prev, next);
 }
@@ -62,12 +67,6 @@ impl<T> Drop for LinkedList<T> {
         while let Some(_) = self.pop_back() {}
         //println!("dropped list")
     }
-}
-
-struct LinkedListNode<T> {
-    prev: Option<NonNull<LinkedListNode<T>>>,
-    next: Option<NonNull<LinkedListNode<T>>>,
-    data: T
 }
 
 #[cfg(test)]
