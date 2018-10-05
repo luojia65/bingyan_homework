@@ -60,12 +60,12 @@ struct BPlusNode<K: Ord, V> {
     next: NodePtr<K, V>,
     entries: Vec<(K, V)>,
     children: Vec<NodePtr<K, V>>,
-    order: usize
+    tree: *mut BPlusTree<K, V>
 }
 
 impl<K: Ord, V> BPlusNode<K, V> {
 
-    fn new_leaf(parent: NodePtr<K, V>, prev: NodePtr<K, V>, next: NodePtr<K, V>, order: usize) -> Self {
+    fn new_leaf(parent: NodePtr<K, V>, prev: NodePtr<K, V>, next: NodePtr<K, V>, tree: *mut BPlusTree<K, V>) -> Self {
         BPlusNode {
             is_leaf: true,
             parent,
@@ -73,7 +73,7 @@ impl<K: Ord, V> BPlusNode<K, V> {
             next,
             entries: Vec::new(),
             children: Vec::new(),
-            order
+            tree
         }
     }
 
@@ -102,25 +102,42 @@ impl<K: Ord, V> BPlusNode<K, V> {
 
     fn try_replace_into(&mut self, (key, value): (K, V)) {
         if self.is_leaf {
-            if self.entries.len() < self.order {
+            let order = unsafe { (*self.tree).order };
+            if self.entries.len() < order {
                 match self.entries.binary_search_by(|(k, _v)| k.cmp(&key)) {
                     Ok(index) => self.entries[index].1 = value,
                     Err(index) => self.entries.insert(index, (key, value))
                 } 
             } else {
-                let left = BPlusNode::new_leaf(self.parent, self.prev, self.next, self.order);
-                let right = BPlusNode::new_leaf(self.parent, self.prev, self.next, self.order);
+                let mut left = BPlusNode::new_leaf(self.parent, self.prev, self.next, self.tree);
+                let left_ptr = Box::into_raw(Box::new(left));
+                let mut right = BPlusNode::new_leaf(self.parent, self.prev, self.next, self.tree);
+                let right_ptr = Box::into_raw(Box::new(right));
                 if self.prev != std::ptr::null_mut() {
                     unsafe {
-                        (*self.prev).next = Box::into_raw(Box::new(left));// as *mut BPlusNode<K, V>;
-
+                        (*self.prev).next = left_ptr;// as *mut BPlusNode<K, V>;
+                        left.prev =(*self).prev
+                    }
+                } 
+                if self.next != std::ptr::null_mut() {
+                    unsafe {
+                        (*self.next).prev = right_ptr;
+                        right.next = (*self).next
                     }
                 }
+                if self.prev != std::ptr::null_mut() {
+                    unsafe {
+                        (*self.tree).head = left_ptr;
+                    }
+                }
+
             }
         }
     }
 }
 
+// 据群友经验，这里需要对裸指针封装，可惜这是我第一次写树...
+// 绝望
 type NodePtr<K, V> = *mut BPlusNode<K, V>;
 
 
