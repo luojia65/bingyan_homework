@@ -5,16 +5,16 @@ use std::ptr::NonNull;
 use std::marker::PhantomData;
 
 pub struct BPlusTree<K, V> {
-    root: Option<NonNull<Node<K, V>>>,
+    root: Root<K, V>,
     head: Option<NonNull<Leaf<K, V>>>,
     tail: Option<NonNull<Leaf<K, V>>>,
-    _marker: PhantomData<Box<Node<K, V>>>
+    _marker: PhantomData<Box<Leaf<K, V>>>
 }
 
 impl<K, V> BPlusTree<K, V> {
     fn new() -> Self {
         BPlusTree {
-            root: None, 
+            root: Root::None, 
             head: None,
             tail: None,
             _marker: PhantomData
@@ -23,7 +23,7 @@ impl<K, V> BPlusTree<K, V> {
 
     fn insert(&mut self, key: K, value: V) {
         match self.root {
-            None => {// insert a new leaf page as root
+            Root::None => {// insert a new leaf page as root
                 let leaf = Leaf {
                     tree: unsafe { NonNull::new_unchecked(self) },
                     data: Vec::new(),
@@ -31,26 +31,21 @@ impl<K, V> BPlusTree<K, V> {
                     prev: None,
                     next: None,
                 };
+                let leaf = Box::into_raw_non_null(Box::new(leaf));
+                self.root = Root::Leaf(leaf);
+                self.head = Some(leaf);
                 unimplemented!("此处有所有权问题，稍后完善")
             }, 
-            Some(mut ptr) => unsafe {ptr.as_mut()}.insert(key, value) 
+            Root::Leaf(mut node) => unsafe {node.as_mut()}.insert(key, value),
+            Root::Internal(mut node) => unsafe {node.as_mut()}.insert(key, value),
         }
     }
 }
 
-enum Node<K, V> {
-    Leaf(Leaf<K, V>),
-    Internal(Internal<K, V>)
-}
-
-impl<K, V> Node<K, V> {
-    #[inline]
-    fn insert(&mut self, key: K, value: V) {
-        match self {
-            Node::Leaf(l) => l.insert(key, value),
-            Node::Internal(l) => l.insert(key, value),
-        }
-    }
+enum Root<K, V> {
+    Leaf(NonNull<Leaf<K, V>>),
+    Internal(NonNull<Internal<K, V>>),
+    None
 }
 
 struct Leaf<K, V> {
@@ -62,6 +57,7 @@ struct Leaf<K, V> {
 }
 
 impl<K, V> Leaf<K, V> {
+
     #[inline]
     fn insert(&mut self, key: K, value: V) {
         unimplemented!()
